@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UFIX Attendance</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0d0d;--surface:#161616;--surface2:#1f1f1f;--border:#2a2a2a;--yellow:#f5c800;--yellow2:#ffd93d;--green:#00e676;--red:#ff4444;--text:#f0f0f0;--muted:#666}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* NAV */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:3px solid var(--yellow);background:var(--bg);position:sticky;top:0;z-index:50}
+.nav-logo img{height:52px}
+.nav-logo-text{display:none;font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--yellow);letter-spacing:3px}
+.nav-clock{font-family:'DM Mono',monospace;font-size:32px;color:var(--yellow);letter-spacing:2px}
+.nav-date{font-family:'DM Mono',monospace;font-size:13px;color:var(--muted);text-align:right;letter-spacing:1px;text-transform:uppercase}
+
+/* PAGES */
+.page{display:none;padding:32px;max-width:1100px;margin:0 auto}
+.page.active{display:block}
+
+/* HOME — 3 big shift buttons */
+.home-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;gap:24px}
+.home-title{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:4px;color:var(--yellow);margin-bottom:16px;text-align:center}
+.shift-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;width:100%;max-width:780px}
+.shift-card{background:var(--surface);border:2px solid var(--border);border-radius:20px;padding:40px 20px;cursor:pointer;transition:all .25s;text-align:center;position:relative;overflow:hidden}
+.shift-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .25s}
+.shift-card.day::before{background:rgba(0,230,118,.05)}
+.shift-card.main::before{background:rgba(245,200,0,.05)}
+.shift-card.night::before{background:rgba(79,195,247,.05)}
+.shift-card:hover{transform:translateY(-4px)}
+.shift-card.day:hover{border-color:var(--green)}
+.shift-card.main:hover{border-color:var(--yellow)}
+.shift-card.night:hover{border-color:#4fc3f7}
+.shift-card:hover::before{opacity:1}
+.shift-logo{margin-bottom:16px}
+.shift-logo img{height:48px}
+.shift-name{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:3px;margin-bottom:8px}
+.shift-card.day .shift-name{color:var(--green)}
+.shift-card.main .shift-name{color:var(--yellow)}
+.shift-card.night .shift-name{color:#4fc3f7}
+.shift-time{font-family:'DM Mono',monospace;font-size:16px;color:var(--muted);letter-spacing:1px}
+.shift-count{margin-top:12px;font-size:14px;font-weight:700;color:var(--muted)}
+
+/* SHIFT PAGE */
+.shift-page-header{display:flex;align-items:center;gap:16px;margin-bottom:28px}
+.back-btn{background:var(--surface2);border:2px solid var(--border);border-radius:10px;padding:10px 20px;color:var(--text);font-family:'Barlow',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
+.back-btn:hover{border-color:var(--yellow);color:var(--yellow)}
+.shift-page-title{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:2px}
+
+/* TABS inside shift page */
+.shift-tabs{display:flex;gap:12px;margin-bottom:24px}
+.shift-tab{padding:12px 28px;border-radius:10px;border:2px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Barlow',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s}
+.shift-tab:hover{border-color:var(--yellow);color:var(--yellow)}
+.shift-tab.active{background:var(--yellow);color:#000;border-color:var(--yellow)}
+
+/* EMP GRID */
+.emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-bottom:28px}
+.emp-card{background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:22px;cursor:pointer;transition:all .2s}
+.emp-card:hover{border-color:var(--yellow);transform:translateY(-2px)}
+.emp-card.selected{border-color:var(--yellow);background:rgba(245,200,0,.08)}
+.emp-name{font-size:24px;font-weight:800;margin-bottom:6px}
+.emp-id{font-family:'DM Mono',monospace;font-size:17px;color:#fff;font-weight:600;margin-bottom:6px}
+.emp-shift{font-size:16px;color:var(--yellow2);font-weight:700}
+
+/* BUTTONS */
+.action-row{display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap}
+.btn{padding:18px 36px;border-radius:12px;border:none;font-family:'Barlow',sans-serif;font-size:19px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+.btn-green{background:var(--green);color:#001a0e}
+.btn-red{background:var(--red);color:#000}
+.btn-yellow{background:var(--yellow);color:#000}
+.btn-ghost{background:var(--surface2);color:var(--text);border:2px solid var(--border)}
+.btn-green:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-2px)}
+.btn-red:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-2px)}
+.btn-yellow:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-2px)}
+.btn-ghost:hover:not(:disabled){border-color:var(--yellow);color:var(--yellow)}
+
+/* CAMERA */
+.camera-wrap{background:var(--surface);border:2px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:24px;display:none}
+.camera-wrap.active{display:block}
+.camera-top{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.camera-label{font-size:19px;font-weight:700;display:flex;align-items:center;gap:10px;color:var(--yellow)}
+.rec{width:10px;height:10px;background:var(--red);border-radius:50%;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+#videoEl{width:100%;max-height:420px;object-fit:cover;display:block;background:#000}
+#canvasEl{display:none}
+#photoEl{width:100%;max-height:420px;object-fit:cover;display:none}
+.camera-bottom{padding:20px 24px;display:flex;gap:12px;flex-wrap:wrap}
+
+/* LOG */
+.log-wrap{background:var(--surface);border:2px solid var(--border);border-radius:14px;overflow:hidden}
+.log-head{padding:14px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted)}
+.log-body{padding:12px;max-height:220px;overflow-y:auto}
+.log-row{display:flex;gap:12px;padding:10px 12px;border-radius:8px;margin-bottom:4px;font-size:15px;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.log-row.success{background:rgba(0,230,118,.08)}
+.log-row.error{background:rgba(255,68,68,.08)}
+.log-row.info{background:rgba(245,200,0,.05)}
+.log-icon{font-size:16px;flex-shrink:0}
+.log-msg{font-weight:600}
+.log-sub{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-top:2px}
+
+/* TOAST */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:16px 28px;font-size:17px;font-weight:700;transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:200;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:var(--green);color:var(--green)}
+.toast.error{border-color:var(--red);color:var(--red)}
+.toast.info{border-color:var(--yellow);color:var(--yellow)}
+.spinner{width:18px;height:18px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:600px){.shift-cards{grid-template-columns:1fr}.shift-card{padding:28px 16px}}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">
+    <img src="ufix_logo.png" alt="UFIX" onerror="this.style.display='none';document.querySelector('.nav-logo-text').style.display='block'">
+    <span class="nav-logo-text">UFIX</span>
+  </div>
+  <div style="text-align:center">
+    <div class="nav-clock" id="clock">00:00:00</div>
+    <div class="nav-date" id="navDate">—</div>
+  </div>
+</nav>
+
+<!-- HOME PAGE -->
+<div class="page active" id="page-home">
+  <div class="home-wrap">
+    <div class="home-title">SELECT YOUR SHIFT</div>
+    <div class="shift-cards">
+
+      <div class="shift-card day" onclick="openShift('08:00')">
+        <div class="shift-name">DAY</div>
+        <div class="shift-time">08:00 — 16:00</div>
+        <div class="shift-count" id="count-day"></div>
+      </div>
+
+      <div class="shift-card main" onclick="openShift('16:00')">
+        <div class="shift-name">MAIN</div>
+        <div class="shift-time">16:00 — 00:00</div>
+        <div class="shift-count" id="count-main"></div>
+      </div>
+
+      <div class="shift-card night" onclick="openShift('00:00')">
+        <div class="shift-name">NIGHT</div>
+        <div class="shift-time">00:00 — 08:00</div>
+        <div class="shift-count" id="count-night"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- SHIFT PAGE (check-in / check-out) -->
+<div class="page" id="page-shift">
+  <div class="shift-page-header">
+    <button class="back-btn" onclick="goHome()">← Back</button>
+    <div class="shift-page-title" id="shiftPageTitle">DAY SHIFT</div>
+  </div>
+
+  <div class="shift-tabs">
+    <button class="shift-tab active" id="tabCI" onclick="switchTab('checkin')">CHECK-IN</button>
+    <button class="shift-tab" id="tabCO" onclick="switchTab('checkout')">CHECK-OUT</button>
+  </div>
+
+  <!-- CHECK-IN -->
+  <div id="panel-checkin">
+    <div class="emp-grid" id="ciEmpGrid"></div>
+    <div class="action-row">
+      <button class="btn btn-green" id="btnCheckin" disabled onclick="startCheckin()">CHECK-IN</button>
+    </div>
+    <div class="camera-wrap" id="cameraWrap">
+      <div class="camera-top">
+        <div class="camera-label"><div class="rec"></div> Selfie Verification</div>
+        <button class="btn btn-ghost" style="padding:8px 16px;font-size:14px" onclick="closeCamera()">Cancel</button>
+      </div>
+      <video id="videoEl" autoplay playsinline muted></video>
+      <canvas id="canvasEl"></canvas>
+      <img id="photoEl" alt="Captured">
+      <div class="camera-bottom">
+        <button class="btn btn-yellow" id="btnSnap" onclick="takePhoto()">Take Photo</button>
+        <button class="btn btn-ghost" id="btnRetake" style="display:none" onclick="retakePhoto()">Retake</button>
+        <button class="btn btn-green" id="btnConfirm" style="display:none" onclick="confirmCheckin()">Confirm Check-in</button>
+      </div>
+    </div>
+    <div class="log-wrap">
+      <div class="log-head">Activity Log</div>
+      <div class="log-body" id="logBody">
+        <div class="log-row info"><span class="log-icon">ℹ️</span><div><div class="log-msg">System ready</div><div class="log-sub">Select an employee</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECK-OUT -->
+  <div id="panel-checkout" style="display:none">
+    <div class="emp-grid" id="coEmpGrid"></div>
+    <div class="action-row">
+      <button class="btn btn-red" id="btnCheckout" disabled onclick="doCheckout()">CHECK-OUT</button>
+    </div>
+    <div class="log-wrap">
+      <div class="log-head">Checkout Log</div>
+      <div class="log-body" id="coLogBody">
+        <div class="log-row info"><span class="log-icon">ℹ️</span><div><div class="log-msg">Select employee to check out</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const BOT_TOKEN="8758406348:AAEjNIPMChEc1gZ3IQlh7aUCShVwutGHOFU";
+const CHAT_IDS=["5952683615","39730332"];
+const SERVER="http://localhost:5000";
+const SHIFT_LABELS={"08:00":"Day: 08:00-16:00","16:00":"Main: 16:00-00:00","00:00":"Night: 00:00-08:00"};
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+let employees=[],currentShift=null,selectedCI=null,selectedCO=null,camStream=null,capturedBlob=null;
+
+// ── CLOCK ─────────────────────────────────
+function updateClock(){
+  const n=new Date();
+  document.getElementById('clock').textContent=n.toTimeString().slice(0,8);
+  document.getElementById('navDate').textContent=DAYS[n.getDay()]+' · '+n.getDate()+' '+MONTHS[n.getMonth()]+' '+n.getFullYear();
+}
+setInterval(updateClock,1000); updateClock();
+
+// ── LOAD EMPLOYEES ────────────────────────
+async function loadEmployees(){
+  try{
+    const r=await fetch(SERVER+"/employees");
+    if(r.ok){
+      employees=await r.json();
+      updateHomeCounts();
+      if(currentShift) renderGrids();
+    }
+  }catch(e){ console.log("Server offline",e); }
+}
+loadEmployees();
+setInterval(loadEmployees,5000);
+
+function updateHomeCounts(){
+  const counts={"08:00":0,"16:00":0,"00:00":0};
+  employees.forEach(e=>{ if(counts[e.shift]!==undefined) counts[e.shift]++; });
+  document.getElementById('count-day').textContent  = counts["08:00"]+" employees";
+  document.getElementById('count-main').textContent = counts["16:00"]+" employees";
+  document.getElementById('count-night').textContent= counts["00:00"]+" employees";
+}
+
+// ── NAVIGATION ────────────────────────────
+function openShift(shift){
+  currentShift=shift;
+  const titles={"08:00":"DAY SHIFT","16:00":"MAIN SHIFT","00:00":"NIGHT SHIFT"};
+  const colors={"08:00":"var(--green)","16:00":"var(--yellow)","00:00":"#4fc3f7"};
+  document.getElementById('shiftPageTitle').textContent=titles[shift];
+  document.getElementById('shiftPageTitle').style.color=colors[shift];
+  document.getElementById('page-home').classList.remove('active');
+  document.getElementById('page-shift').classList.add('active');
+  switchTab('checkin');
+  renderGrids();
+}
+
+function goHome(){
+  closeCamera();
+  currentShift=null; selectedCI=null; selectedCO=null;
+  document.getElementById('page-shift').classList.remove('active');
+  document.getElementById('page-home').classList.add('active');
+}
+
+function switchTab(tab){
+  document.getElementById('panel-checkin').style.display = tab==='checkin'?'block':'none';
+  document.getElementById('panel-checkout').style.display= tab==='checkout'?'block':'none';
+  document.getElementById('tabCI').className='shift-tab'+(tab==='checkin'?' active':'');
+  document.getElementById('tabCO').className='shift-tab'+(tab==='checkout'?' active':'');
+  selectedCI=null; selectedCO=null;
+  document.getElementById('btnCheckin').disabled=true;
+  document.getElementById('btnCheckout').disabled=true;
+}
+
+// ── RENDER GRIDS ──────────────────────────
+function renderGrids(){
+  const filtered=employees.filter(e=>e.shift===currentShift);
+  document.getElementById('ciEmpGrid').innerHTML=filtered.map(e=>`
+    <div class="emp-card" id="ci_${e.id.replace('#','')}" onclick="selectCI('${e.id}')">
+      <div class="emp-name">${e.name}</div>
+      <div class="emp-id">${e.id}</div>
+      <div class="emp-shift">${SHIFT_LABELS[e.shift]||e.shift}</div>
+    </div>`).join('');
+  document.getElementById('coEmpGrid').innerHTML=filtered.map(e=>`
+    <div class="emp-card" id="co_${e.id.replace('#','')}" onclick="selectCO('${e.id}')">
+      <div class="emp-name">${e.name}</div>
+      <div class="emp-id">${e.id}</div>
+      <div class="emp-shift">${SHIFT_LABELS[e.shift]||e.shift}</div>
+    </div>`).join('');
+}
+
+function selectCI(id){
+  document.querySelectorAll('#ciEmpGrid .emp-card').forEach(c=>c.classList.remove('selected'));
+  const el=document.getElementById('ci_'+id.replace('#',''));
+  if(el) el.classList.add('selected');
+  selectedCI=employees.find(e=>e.id===id);
+  document.getElementById('btnCheckin').disabled=false;
+  addLog('info','Selected: '+selectedCI.name+' '+selectedCI.id,SHIFT_LABELS[selectedCI.shift],'logBody');
+}
+
+function selectCO(id){
+  document.querySelectorAll('#coEmpGrid .emp-card').forEach(c=>c.classList.remove('selected'));
+  const el=document.getElementById('co_'+id.replace('#',''));
+  if(el) el.classList.add('selected');
+  selectedCO=employees.find(e=>e.id===id);
+  document.getElementById('btnCheckout').disabled=false;
+}
+
+// ── SHIFT TIMES ───────────────────────────
+function getShiftTimes(emp,now){
+  const h=parseInt(emp.shift);
+  let start=new Date(now),end=new Date(now);
+  if(h===8){start.setHours(8,0,0,0);end.setHours(16,0,0,0);}
+  else if(h===16){start.setHours(16,0,0,0);end=new Date(now);end.setDate(end.getDate()+1);end.setHours(0,0,0,0);}
+  else{if(now.getHours()>=20){start=new Date(now);start.setDate(start.getDate()+1);start.setHours(0,0,0,0);}else{start.setHours(0,0,0,0);}end=new Date(start);end.setHours(8,0,0,0);}
+  return{start,end};
+}
+function calcLate(emp,now){const{start}=getShiftTimes(emp,now);return Math.max(0,Math.floor((now-start)/60000));}
+function formatLate(m){if(m<=0)return'✅ On time';const h=Math.floor(m/60),r=m%60;return h>0?`⏰ ${h}h ${r}min late`:`⏰ ${m} min late`;}
+function formatDur(m){const h=Math.floor(m/60),r=m%60;if(h>0&&r>0)return h+'h '+r+'min';if(h>0)return h+'h';return m+'min';}
+function getMonthKey(d){return d.getFullYear()+'-M'+String(d.getMonth()+1).padStart(2,'0');}
+
+// ── CHECK-IN ──────────────────────────────
+async function startCheckin(){
+  if(!selectedCI)return;
+  await openCamera();
+}
+
+async function openCamera(){
+  const wrap=document.getElementById('cameraWrap');
+  wrap.classList.add('active');
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'},audio:false});
+    const v=document.getElementById('videoEl');
+    v.srcObject=camStream; v.style.display='block';
+    document.getElementById('photoEl').style.display='none';
+    document.getElementById('btnSnap').style.display='block';
+    document.getElementById('btnRetake').style.display='none';
+    document.getElementById('btnConfirm').style.display='none';
+  }catch(e){addLog('error','Camera denied',e.message,'logBody');showToast('Camera access denied','error');wrap.classList.remove('active');}
+}
+
+function takePhoto(){
+  const v=document.getElementById('videoEl'),c=document.getElementById('canvasEl'),p=document.getElementById('photoEl');
+  c.width=v.videoWidth||640; c.height=v.videoHeight||480;
+  c.getContext('2d').drawImage(v,0,0);
+  c.toBlob(blob=>{capturedBlob=blob;p.src=URL.createObjectURL(blob);p.style.display='block';v.style.display='none';document.getElementById('btnSnap').style.display='none';document.getElementById('btnRetake').style.display='block';document.getElementById('btnConfirm').style.display='block';},'image/jpeg',0.9);
+}
+
+function retakePhoto(){
+  document.getElementById('photoEl').style.display='none';
+  document.getElementById('videoEl').style.display='block';
+  document.getElementById('btnSnap').style.display='block';
+  document.getElementById('btnRetake').style.display='none';
+  document.getElementById('btnConfirm').style.display='none';
+  capturedBlob=null;
+}
+
+function closeCamera(){
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  document.getElementById('cameraWrap').classList.remove('active');
+  capturedBlob=null;
+}
+
+async function confirmCheckin(){
+  if(!capturedBlob||!selectedCI)return;
+  const btn=document.getElementById('btnConfirm');
+  btn.innerHTML='<span class="spinner"></span> Sending...'; btn.disabled=true;
+  const now=new Date(),timeStr=now.toTimeString().slice(0,5),emp=selectedCI;
+  const late=calcLate(emp,now),lateStr=formatLate(late);
+  const caption=`🟢 CHECK-IN\n\n👤 ${emp.name} ${emp.id}\n📋 Shift: ${SHIFT_LABELS[emp.shift]}\n🕒 Time: ${timeStr}\n⏰ ${lateStr}`;
+  const ok=await sendPhoto(capturedBlob,caption);
+  if(ok){
+    addLog('success',emp.name+' checked in',timeStr+' · '+lateStr,'logBody');
+    showToast('✓ Check-in confirmed!','success');
+    closeCamera();
+    selectedCI=null;
+    document.querySelectorAll('#ciEmpGrid .emp-card').forEach(c=>c.classList.remove('selected'));
+    document.getElementById('btnCheckin').disabled=true;
+  }else{
+    addLog('error','Failed to send','Check internet','logBody');
+    showToast('Connection error','error');
+    btn.innerHTML='Confirm Check-in'; btn.disabled=false;
+  }
+}
+
+// ── CHECK-OUT ─────────────────────────────
+async function doCheckout(){
+  if(!selectedCO)return;
+  const emp=selectedCO,now=new Date(),timeStr=now.toTimeString().slice(0,5);
+  const{end}=getShiftTimes(emp,now);
+  const em=now<end?Math.floor((end-now)/60000):0;
+  const earlyMsg=em>0?'\n⚠️ Left '+formatDur(em)+' early!':'';
+  const text=`🔴 CHECK-OUT\n\n👤 ${emp.name} ${emp.id}\n📋 Shift: ${SHIFT_LABELS[emp.shift]}\n🕒 Time: ${timeStr}${earlyMsg}`;
+  await sendMsg(text);
+  addLog('success',emp.name+' checked out',timeStr,'coLogBody');
+  showToast('✓ '+emp.name+' checked out','success');
+  selectedCO=null;
+  document.querySelectorAll('#coEmpGrid .emp-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('btnCheckout').disabled=true;
+}
+
+// ── TELEGRAM ──────────────────────────────
+async function sendMsg(text){
+  try{const results=await Promise.all(CHAT_IDS.map(id=>fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:id,text})})));return results.some(r=>r.ok);}catch{return false;}
+}
+async function sendPhoto(blob,caption){
+  try{const results=await Promise.all(CHAT_IDS.map(id=>{const f=new FormData();f.append('chat_id',id);f.append('caption',caption);f.append('photo',blob,'checkin.jpg');return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,{method:'POST',body:f});}));return results.some(r=>r.ok);}catch{return false;}
+}
+
+// ── LOG & TOAST ───────────────────────────
+function addLog(type,msg,sub,logId){
+  const icons={success:'✅',error:'❌',info:'ℹ️'};
+  const body=document.getElementById(logId),now=new Date().toTimeString().slice(0,8),el=document.createElement('div');
+  el.className=`log-row ${type}`;
+  el.innerHTML=`<span class="log-icon">${icons[type]}</span><div><div class="log-msg">${msg}</div><div class="log-sub">${now}${sub?' · '+sub:''}</div></div>`;
+  body.prepend(el);
+  while(body.children.length>30)body.removeChild(body.lastChild);
+}
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.classList.remove('show'),3000);}
+</script>
+</body>
+</html>
